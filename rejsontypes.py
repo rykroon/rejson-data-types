@@ -43,6 +43,7 @@ class ReJsonArr(list):
         return self.__class__.connection.jsonarrlen(self.key, self.path)
         
     def __getitem__(self, index):
+        index = self._normalize_index(index)
         try:
             return super().__getitem__(index)
         except IndexError:
@@ -95,7 +96,7 @@ class ReJsonArr(list):
         """
         start_index = super().__len__()
         end_index = self._normalize_index(index)
-        if start_index >= end_index:
+        if start_index > end_index:
             return
         
         #remove the '.'
@@ -120,8 +121,9 @@ class ReJsonArr(list):
         self.__class__.connection.jsonarrappend(self.key, self.path, obj)
 
     def extend(self, iterable):
-        #ReJson does not have this capability
-        raise NotImplementedError
+        self._pull(-1)
+        super().extend(iterable)
+        self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
 
     def insert(self, index, obj):
         # found a bug 
