@@ -24,6 +24,7 @@ class ReJsonArr(list):
     def __init__(self, key, path='.', arr=[]):
         self.key = key
         self.path = path
+        self.length = None
         json_type = self.__class__.connection.jsontype(self.key, self.path)
 
         #do not create a new array if one already exists
@@ -40,7 +41,9 @@ class ReJsonArr(list):
             
 
     def __len__(self):
-        return self.__class__.connection.jsonarrlen(self.key, self.path)
+        if self.length is None:
+            self.length =  self.__class__.connection.jsonarrlen(self.key, self.path)
+        return self.length
         
     def __getitem__(self, index):
         index = self._normalize_index(index)
@@ -118,12 +121,12 @@ class ReJsonArr(list):
     def append(self, obj):
         self._pull(-1)
         super().append(obj)
-        self.__class__.connection.jsonarrappend(self.key, self.path, obj)
+        self.length = self.__class__.connection.jsonarrappend(self.key, self.path, obj)
 
     def extend(self, iterable):
         self._pull(-1)
         super().extend(iterable)
-        self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
+        self.length = self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
 
     def insert(self, index, obj):
         # found a bug 
@@ -132,12 +135,15 @@ class ReJsonArr(list):
         index = self._normalize_index(index)
         self._pull(index)
         super().insert(index, obj)
-        self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
+        self.length = self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
 
     def pop(self, index=-1):
         self._pull(index)
         super().pop(index)
-        self.__class__.connection.jsonarrpop(self.key, self.path, index)
+        result = self.__class__.connection.jsonarrpop(self.key, self.path, index)
+        self.length -= 1
+        return result
+
 
 
 class ReJsonObj(dict):
