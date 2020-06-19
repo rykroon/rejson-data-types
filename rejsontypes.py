@@ -77,24 +77,24 @@ class ReJsonArr(list):
         if len(self) > super().__len__():
             if super().__len__() == 0:
                 return '[...]'
-                
             result = result[:-1]
             result += ', ...]'
         return result
+
+    def _normalize_index(self, index):
+        remote_length = len(self)
+        if index < 0:
+            index = remote_length + index
+        index = max(index, 0)
+        index = min(index, remote_length-1)
+        return index
 
     def _pull(self, index):
         """
             Pull elements from redis up to a certain index
         """
-        remote_length = len(self)
-        local_length = super().__len__()
-        start_index = local_length
-
-        #normalize index
-        if index < 0:
-            index = remote_length + index
-        end_index = min(index, remote_length-1)
-    
+        start_index = super().__len__()
+        end_index = self._normalize_index(index)
         if start_index >= end_index:
             return
         
@@ -111,12 +111,11 @@ class ReJsonArr(list):
         else:
             #this will probably only work properly for versions of Python that have ordered dictionaries
             result = self.__class__.connection.jsonget(self.key, *paths)
-            values = list(result.values)
+            values = list(result.values())
             super().extend(values)
-            # for v in result.values():
-            #     super().append(v)
 
     def append(self, obj):
+        self._pull(-1)
         super().append(obj)
         self.__class__.connection.jsonarrappend(self.key, self.path, obj)
 
@@ -128,11 +127,13 @@ class ReJsonArr(list):
         # found a bug 
         # python will interpret an index out of range as the first or last index (depending on which direction it is out of bounds)
         # redis will interpret an index out of range as.. well.. an index out of range
-        index = min(index, len(self))
+        index = self._normalize_index(index)
+        self._pull(index)
         super().insert(index, obj)
         self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
 
     def pop(self, index=-1):
+        self._pull(index)
         super().pop(index)
         self.__class__.connection.jsonarrpop(self.key, self.path, index)
 
