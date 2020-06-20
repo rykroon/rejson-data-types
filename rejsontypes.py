@@ -84,15 +84,15 @@ class ReJsonArr(list):
         elif isinstance(value, list):
             value = ReJsonArr(self.key, path, value)
 
-        super().__setitem__(index, value)
         self.__class__.connection.jsonset(self.key, path, value)
+        super().__setitem__(index, value)
+        
 
     def __delitem__(self, index):
         self._pull(index)
         path = self.path[index]
-
+        self.__class__.connection.jsondel(self.key, path) 
         super().__delitem__(index)
-        self.__class__.connection.jsondel(self.key, path)        
 
     def __repr__(self):
         result = super().__repr__()
@@ -132,25 +132,25 @@ class ReJsonArr(list):
 
     def append(self, obj):
         self._pull(-1)
-        super().append(obj)
         self.length = self.__class__.connection.jsonarrappend(self.key, self.path, obj)
-
+        super().append(obj)
+        
     def extend(self, iterable):
         self._pull(-1)
-        super().extend(iterable)
         self.length = self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
+        super().extend(iterable)
 
     def insert(self, index, obj):
         index = self._normalize_index(index)
         self._pull(index)
-        super().insert(index, obj)
         self.length = self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
+        super().insert(index, obj)
 
     def pop(self, index=-1):
         self._pull(index)
-        super().pop(index)
         result = self.__class__.connection.jsonarrpop(self.key, self.path, index)
         self.length -= 1
+        super().pop(index)
         return result
 
 
