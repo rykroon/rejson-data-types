@@ -58,9 +58,9 @@ class ReJsonArr(list):
         else:
             raise TypeError
 
-    def __iter__(self):
-        self._pull(-1)
-        return super().__iter__()
+    # def __iter__(self):
+    #     self._pull(-1)
+    #     return super().__iter__()
             
     def __len__(self):
         if self.length is None:
@@ -68,15 +68,13 @@ class ReJsonArr(list):
         return self.length
         
     def __getitem__(self, index):
-        index = self._normalize_index(index)
-        try:
-            return super().__getitem__(index)
-        except IndexError:
+        if type(index) == slice:
+            self._pull(index.stop)
+        else:
             self._pull(index)
-            return super().__getitem__(index)
+        return super().__getitem__(index)
 
     def __setitem__(self, index, value):
-        index = self._normalize_index(index)
         self._pull(index)
         path = self.path[index]
 
@@ -90,7 +88,6 @@ class ReJsonArr(list):
         self.__class__.connection.jsonset(self.key, path, value)
 
     def __delitem__(self, index):
-        index = self._normalize_index(index)
         self._pull(index)
         path = self.path[index]
 
