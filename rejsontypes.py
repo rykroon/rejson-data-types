@@ -1,5 +1,20 @@
 
 
+class Path(str):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+    def __getitem__(self, key):
+        path = str(self)
+        if path.startswith('.'):
+            path = path[1:]
+        if isinstance(key, int):
+            path = '{}[{}]'.format(path, key)
+        elif isinstance(key, str):
+            path = '{}.{}'.format(path, key)
+        return self.__class__(path)
+
+
 class ReJsonModel():
     connection = None
 
@@ -18,12 +33,16 @@ class ReJsonModel():
         del self.__dict__[attr]
 
 
+class ReJsonMixin:
+    pass
+
+
 class ReJsonArr(list):
     connection = None
 
     def __init__(self, key, path='.', arr=[]):
         self.key = key
-        self.path = path
+        self.path = Path(path)
         self.length = None
         json_type = self.__class__.connection.jsontype(self.key, self.path)
 
@@ -38,11 +57,14 @@ class ReJsonArr(list):
 
         else:
             raise TypeError
-            
 
+    def __iter__(self):
+        self._pull(-1)
+        return super().__iter__()
+            
     def __len__(self):
         if self.length is None:
-            self.length =  self.__class__.connection.jsonarrlen(self.key, self.path)
+            self.length = self.__class__.connection.jsonarrlen(self.key, self.path)
         return self.length
         
     def __getitem__(self, index):
@@ -50,14 +72,13 @@ class ReJsonArr(list):
         try:
             return super().__getitem__(index)
         except IndexError:
-            print("Get from Redis")
             self._pull(index)
             return super().__getitem__(index)
 
     def __setitem__(self, index, value):
-        path = '{}[{}]'.format(self.path, index)
-        if path.startswith('.'):
-            path = path[1:]
+        index = self._normalize_index(index)
+        self._pull(index)
+        path = self.path[index]
 
         if isinstance(value, dict):
             value = ReJsonObj(self.key, path, value)
@@ -69,9 +90,9 @@ class ReJsonArr(list):
         self.__class__.connection.jsonset(self.key, path, value)
 
     def __delitem__(self, index):
-        path = '{}[{}]'.format(self.path, index)
-        if path.startswith('.'):
-            path = path[1:]
+        index = self._normalize_index(index)
+        self._pull(index)
+        path = self.path[index]
 
         super().__delitem__(index)
         self.__class__.connection.jsondel(self.key, path)        
@@ -86,11 +107,10 @@ class ReJsonArr(list):
         return result
 
     def _normalize_index(self, index):
-        remote_length = len(self)
         if index < 0:
-            index = remote_length + index
+            index = len(self) + index
         index = max(index, 0)
-        index = min(index, remote_length-1)
+        index = min(index, len(self)-1)
         return index
 
     def _pull(self, index):
@@ -101,13 +121,8 @@ class ReJsonArr(list):
         end_index = self._normalize_index(index)
         if start_index > end_index:
             return
-        
-        #remove the '.'
-        path = self.path
-        if path.startswith('.'):
-            path = path[1:]
 
-        paths = ['{}[{}]'.format(path, i) for i in range(start_index, end_index + 1)]
+        paths = [self.path[i] for i in range(start_index, end_index + 1)]
 
         if len(paths) == 1:
             value = self.__class__.connection.jsonget(self.key, paths[0])
@@ -129,9 +144,6 @@ class ReJsonArr(list):
         self.length = self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
 
     def insert(self, index, obj):
-        # found a bug 
-        # python will interpret an index out of range as the first or last index (depending on which direction it is out of bounds)
-        # redis will interpret an index out of range as.. well.. an index out of range
         index = self._normalize_index(index)
         self._pull(index)
         super().insert(index, obj)
