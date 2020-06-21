@@ -107,7 +107,7 @@ class ReJsonArr(list):
         if index < 0:
             index = len(self) + index
         index = max(index, 0)
-        index = min(index, len(self)-1)
+        index = min(index, len(self))
         return index
 
     def _pull(self, index):
@@ -116,10 +116,10 @@ class ReJsonArr(list):
         """
         start_index = super().__len__()
         end_index = self._normalize_index(index)
-        if start_index > end_index:
+        if start_index >= end_index:
             return
 
-        paths = [self.path[i] for i in range(start_index, end_index + 1)]
+        paths = [self.path[i] for i in range(start_index, end_index)]
 
         if len(paths) == 1:
             value = self.__class__.connection.jsonget(self.key, paths[0])
