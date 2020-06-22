@@ -113,6 +113,13 @@ class ReJsonArr(list):
     def append(self, obj):
         self.__class__.connection.jsonarrappend(self.key, self.path, obj)
         super().append(obj)
+
+    def clear(self):
+        self.__class__.connection.jsonset(self.key, self.path, {})
+        super().clear()
+
+    def count(self, value):
+        raise NotImplementedError
         
     def extend(self, iterable):
         self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
@@ -140,6 +147,20 @@ class ReJsonArr(list):
         result = self.__class__.connection.jsonarrpop(self.key, self.path, index)
         super().pop(index)
         return result
+
+    def remove(self, value):
+        try:
+            index = self.index(value)
+        except ValueError:
+            raise ValueError("list.remove(x): x not in list") 
+
+        del self[index]
+
+    def reverse(self):
+        raise NotImplementedError
+
+    def sort(self):
+        raise NotImplementedError
 
 
 class ReJsonObj(dict):
