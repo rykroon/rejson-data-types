@@ -175,7 +175,8 @@ class ReJsonObj(dict):
 
         #do not create a new object if one already exists
         if json_type == 'object':
-            super().__init__([])
+            keys = self.__class__.connection.jsonobjkeys(self.key)
+            super().__init__(dict.fromkeys(keys, NotPulled))
 
         #The object does not exist so create one
         elif json_type is None:
@@ -189,32 +190,16 @@ class ReJsonObj(dict):
         return self.__class__.connection.jsonobjlen(self.key, self.path)
 
     def __getitem__(self, key):
-        try:
-            return super().__getitem__(key)
-        except KeyError:
-            pass
-
-        path = self.path[key]
-        value = self.__class__.connection.jsonget(self.key, path)
-        
-        if isinstance(value, dict):
-            value = ReJsonObj(self.key, path, value)
-
-        elif isinstance(value, list):
-            value = ReJsonArr(self.key, path, value)
-
-        super().__setitem__(key, value)
+        value = super().__getitem__(key)
+        if value is NotPulled:
+            path = self.path[key]
+            value = self.__class__.connection.jsonget(self.key, path)
+            super().__setitem__(key, value)
         return value
 
     def __setitem__(self, key, value):
+        #add logic for slice
         path = self.path[key]
-
-        if isinstance(value, dict):
-            value = ReJsonObj(self.key, path, value)
-
-        elif isinstance(value, list):
-            value = ReJsonArr(self.key, path, value)
-
         self.__class__.connection.jsonset(self.key, path, value)
         super().__setitem__(key, value)
 
@@ -223,14 +208,36 @@ class ReJsonObj(dict):
         self.__class__.connection.jsondel(self.key, path)
         super().__delitem__(key)
 
-    def keys(self):
-        return self.__class__.connection.jsonobjkeys(self.key)
+    def clear(self):
+        pass
 
-    def values(self):
+    def copy(self):
+        pass
+
+    def fromkeys(self):
+        pass
+
+    def get(self):
         pass
 
     def items(self):
         pass
 
+    # def keys(self):
+    #     pass      
+
+    def pop(self):
+        pass
+
+    def popitem(self):
+        pass
+
+    def setdefault(self):
+        pass
+
     def update(self):
         pass
+
+    def values(self):
+        pass
+    
