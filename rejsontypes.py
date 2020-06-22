@@ -86,11 +86,12 @@ class ReJsonArr(list):
         
 
     def __delitem__(self, index):
-        self._pull(index)
         path = self.path[index]
         self.__class__.connection.jsondel(self.key, path)
         self.length = None
-        super().__delitem__(index)
+        index = self._convert_neg_index(index)
+        if index < super().__len__():
+            super().__delitem__(index)
 
     def __repr__(self):
         result = super().__repr__()
@@ -100,6 +101,9 @@ class ReJsonArr(list):
             result = result[:-1]
             result += ', ...]'
         return result
+
+    def _slice_to_path(self, slice_):
+        pass
 
     def _convert_neg_index(self, index):
         if index < 0:
