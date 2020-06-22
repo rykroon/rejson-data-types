@@ -101,6 +101,11 @@ class ReJsonArr(list):
             result += ', ...]'
         return result
 
+    def _convert_neg_index(self, index):
+        if index < 0:
+            return index + len(self)
+        return index
+
     def _round_index(self, index, exclusive=False):
         """
             if the index is out of range... 
@@ -117,8 +122,7 @@ class ReJsonArr(list):
             index = index.stop or len(self)
 
         #convert negative index
-        if index < 0:
-            index += len(self)
+        index = self._convert_neg_index(index)
 
         # set minimum index to 0
         index = max(index, 0)
@@ -171,7 +175,7 @@ class ReJsonArr(list):
         result = self.__class__.connection.jsonarrpop(self.key, self.path, index)
         self.length = None
 
-        index = self._round_index(index)
+        index = self._convert_neg_index(index)
         if index < super().__len__():
             super().pop(index)
         return result
@@ -183,7 +187,8 @@ class ReJsonObj(dict):
 
     def __init__(self, key, path='.', obj={}):
         self.key = key
-        self.path = path
+        self.path = Path(path)
+        self.length = None
 
         json_type = self.__class__.connection.jsontype(self.key, self.path)
 
@@ -199,15 +204,16 @@ class ReJsonObj(dict):
         else:
             raise TypeError
 
+    def __len__(self):
+        return self.__class__.connection.jsonobjlen(self.key, self.path)
+
     def __getitem__(self, key):
         try:
             return super().__getitem__(key)
         except KeyError:
             pass
 
-        path = '{}["{}"]'.format(self.path, key)
-        if path.startswith('.'):
-            path = path[1:]
+        path = self.path[key]
         value = self.__class__.connection.jsonget(self.key, path)
         
         if isinstance(value, dict):
@@ -220,9 +226,7 @@ class ReJsonObj(dict):
         return value
 
     def __setitem__(self, key, value):
-        path = '{}["{}"]'.format(self.path, key)
-        if path.startswith('.'):
-            path = path[1:]
+        path = self.path[key]
 
         if isinstance(value, dict):
             value = ReJsonObj(self.key, path, value)
@@ -230,16 +234,13 @@ class ReJsonObj(dict):
         elif isinstance(value, list):
             value = ReJsonArr(self.key, path, value)
 
-        super().__setitem__(key, value)
         self.__class__.connection.jsonset(self.key, path, value)
+        super().__setitem__(key, value)
 
     def __delitem__(self, key):
-        path = '{}["{}"]'.format(self.path, key)
-        if path.startswith('.'):
-            path = path[1:]
-
-        super().__delitem__(key)
+        path = self.path[key]
         self.__class__.connection.jsondel(self.key, path)
+        super().__delitem__(key)
 
     def keys(self):
         return self.__class__.connection.jsonobjkeys(self.key)
