@@ -14,6 +14,7 @@ class Path(str):
             path = '{}.{}'.format(path, key)
         return self.__class__(path)
 
+
 class NotPulledType:
     def __new__(cls):
         """
@@ -25,6 +26,7 @@ class NotPulledType:
 
     def __repr__(self):
         return '-'
+
 
 NotPulled = NotPulledType()
 
@@ -48,7 +50,13 @@ class ReJsonModel():
 
 
 class ReJsonMixin:
-    pass
+    connection = None
+
+    def expire(self, ttl):
+        pass
+
+    def ttl(self):
+        pass
 
 
 class ReJsonArr(list):
@@ -57,7 +65,6 @@ class ReJsonArr(list):
     def __init__(self, key, path='.', arr=[]):
         self.key = key
         self.path = Path(path)
-        self.length = None
         json_type = self.__class__.connection.jsontype(self.key, self.path)
 
         #do not create a new array if one already exists
@@ -83,6 +90,7 @@ class ReJsonArr(list):
     #     return self.length
         
     def __getitem__(self, index):
+        #add logic for slice
         value = super().__getitem__(index)
         if value is NotPulled:
             path = self.path[index]
@@ -91,11 +99,13 @@ class ReJsonArr(list):
         return value
 
     def __setitem__(self, index, value):
+        #add logic for slice
         path = self.path[index]
         self.__class__.connection.jsonset(self.key, path, value)
         super().__setitem__(index, value)
         
     def __delitem__(self, index):
+        # add logic for slice
         path = self.path[index]
         self.__class__.connection.jsondel(self.key, path)
         super().__delitem__(index)
@@ -110,11 +120,19 @@ class ReJsonArr(list):
 
     def index(self, value, start=0, stop=9223372036854775807):
         index = self.__class__.connection.jsonarrindex(self.key, self.path, value, start, stop)
-        super().__setitem__(index, value)
+        if index >= 0:
+            super().__setitem__(index, value)
+        else:
+            raise ValueError("{} is not in list".format(value))
         return index
 
     def insert(self, index, obj):
-        #might need to round the index
+        #round index
+        if index < 0:
+            index += len(self)
+        index = max(index, 0)
+        index = min(index, len(self))
+
         self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
         super().insert(index, obj)
 
@@ -122,6 +140,7 @@ class ReJsonArr(list):
         result = self.__class__.connection.jsonarrpop(self.key, self.path, index)
         super().pop(index)
         return result
+
 
 class ReJsonObj(dict):
     connection = None
