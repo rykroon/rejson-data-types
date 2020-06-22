@@ -14,6 +14,20 @@ class Path(str):
             path = '{}.{}'.format(path, key)
         return self.__class__(path)
 
+class NotPulledType:
+    def __new__(cls):
+        """
+            There can only be at most ONE instance of NotPulledType
+        """
+        if not hasattr(cls, '_instance'):
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self):
+        return '-'
+
+NotPulled = NotPulledType()
+
 
 class ReJsonModel():
     connection = None
@@ -48,7 +62,8 @@ class ReJsonArr(list):
 
         #do not create a new array if one already exists
         if json_type == 'array':
-            super().__init__([])
+            length = self.__class__.connection.jsonarrlen(self.key, self.path)
+            super().__init__([NotPulled] * length)
 
         #The array does not exist so create one
         elif json_type is None:
@@ -62,125 +77,51 @@ class ReJsonArr(list):
     #     self._pull(-1)
     #     return super().__iter__()
             
-    def __len__(self):
-        if self.length is None:
-            self.length = self.__class__.connection.jsonarrlen(self.key, self.path)
-        return self.length
+    # def __len__(self):
+    #     if self.length is None:
+    #         self.length = self.__class__.connection.jsonarrlen(self.key, self.path)
+    #     return self.length
         
     def __getitem__(self, index):
-        self._pull(index)
-        return super().__getitem__(index)
+        value = super().__getitem__(index)
+        if value is NotPulled:
+            path = self.path[index]
+            value = self.__class__.connection.jsonget(self.key, path)
+            super().__setitem__(index, value)
+        return value
 
     def __setitem__(self, index, value):
-        self._pull(index)
         path = self.path[index]
-
-        if isinstance(value, dict):
-            value = ReJsonObj(self.key, path, value)
-
-        elif isinstance(value, list):
-            value = ReJsonArr(self.key, path, value)
-
         self.__class__.connection.jsonset(self.key, path, value)
         super().__setitem__(index, value)
         
-
     def __delitem__(self, index):
-        self._pull(index)
         path = self.path[index]
         self.__class__.connection.jsondel(self.key, path)
-        self.length = None
         super().__delitem__(index)
 
-    def __repr__(self):
-        result = super().__repr__()
-        if len(self) > super().__len__():
-            if super().__len__() == 0:
-                return '[...]'
-            result = result[:-1]
-            result += ', ...]'
-        return result
-
-    def _convert_neg_index(self, index):
-        if index < 0:
-            return index + len(self)
-        return index
-
-    def _round_index(self, index, exclusive=False):
-        """
-            if the index is out of range... 
-                set to 0 if below range
-                set to last index or last index +1 if above range
-            
-            :param index: The index to round
-            :type index: int or slice
-            :param exclusive: Whether or not the index should be treated as inclusive or exclusive
-            :type exclusive: bool
-        """
-        #convert slice into an int
-        if type(index) == slice:
-            index = index.stop or len(self)
-
-        #convert negative index
-        index = self._convert_neg_index(index)
-
-        # set minimum index to 0
-        index = max(index, 0)
-
-        #set maximum index to the length of the list
-        max_index = len(self)
-        #if not exclusive, subtract 1
-        if not exclusive:
-            max_index -= 1
-        index = min(index, max_index)
-        return index
-
-    def _pull(self, index):
-        """
-            Pull elements from redis up to a certain index
-        """
-        start_index = super().__len__()
-        index = self._round_index(index)    
-        if start_index > index:
-            return
-
-        paths = [self.path[i] for i in range(start_index, index + 1)]
-
-        if len(paths) == 1:
-            value = self.__class__.connection.jsonget(self.key, paths[0])
-            super().append(value)
-        elif len(paths) > 1:
-            #this will probably only work properly for versions of Python that have ordered dictionaries
-            result = self.__class__.connection.jsonget(self.key, *paths)
-            values = list(result.values())
-            super().extend(values)
-
     def append(self, obj):
-        self._pull(-1)
-        self.length = self.__class__.connection.jsonarrappend(self.key, self.path, obj)
+        self.__class__.connection.jsonarrappend(self.key, self.path, obj)
         super().append(obj)
         
     def extend(self, iterable):
-        self._pull(-1)
-        self.length = self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
+        self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
         super().extend(iterable)
 
+    def index(self, value, start=0, stop=9223372036854775807):
+        index = self.__class__.connection.jsonarrindex(self.key, self.path, value, start, stop)
+        super().__setitem__(index, value)
+        return index
+
     def insert(self, index, obj):
-        self._pull(index)
-        index = self._round_index(index, exclusive=True)
-        self.length = self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
+        #might need to round the index
+        self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
         super().insert(index, obj)
 
     def pop(self, index=-1):
         result = self.__class__.connection.jsonarrpop(self.key, self.path, index)
-        self.length = None
-
-        index = self._convert_neg_index(index)
-        if index < super().__len__():
-            super().pop(index)
+        super().pop(index)
         return result
-
-
 
 class ReJsonObj(dict):
     connection = None
