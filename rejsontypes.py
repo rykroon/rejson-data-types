@@ -68,10 +68,7 @@ class ReJsonArr(list):
         return self.length
         
     def __getitem__(self, index):
-        if type(index) == slice:
-            self._pull(index.stop)
-        else:
-            self._pull(index)
+        self._pull(index)
         return super().__getitem__(index)
 
     def __setitem__(self, index, value):
@@ -91,7 +88,8 @@ class ReJsonArr(list):
     def __delitem__(self, index):
         self._pull(index)
         path = self.path[index]
-        self.__class__.connection.jsondel(self.key, path) 
+        self.__class__.connection.jsondel(self.key, path)
+        self.length = None
         super().__delitem__(index)
 
     def __repr__(self):
@@ -103,11 +101,34 @@ class ReJsonArr(list):
             result += ', ...]'
         return result
 
-    def _normalize_index(self, index):
+    def _round_index(self, index, exclusive=False):
+        """
+            if the index is out of range... 
+                set to 0 if below range
+                set to last index or last index +1 if above range
+            
+            :param index: The index to round
+            :type index: int or slice
+            :param exclusive: Whether or not the index should be treated as inclusive or exclusive
+            :type exclusive: bool
+        """
+        #convert slice into an int
+        if type(index) == slice:
+            index = index.stop or len(self)
+
+        #convert negative index
         if index < 0:
-            index = len(self) + index
+            index += len(self)
+
+        # set minimum index to 0
         index = max(index, 0)
-        index = min(index, len(self))
+
+        #set maximum index to the length of the list
+        max_index = len(self)
+        #if not exclusive, subtract 1
+        if not exclusive:
+            max_index -= 1
+        index = min(index, max_index)
         return index
 
     def _pull(self, index):
@@ -115,16 +136,16 @@ class ReJsonArr(list):
             Pull elements from redis up to a certain index
         """
         start_index = super().__len__()
-        end_index = self._normalize_index(index)
-        if start_index >= end_index:
+        index = self._round_index(index)    
+        if start_index > index:
             return
 
-        paths = [self.path[i] for i in range(start_index, end_index)]
+        paths = [self.path[i] for i in range(start_index, index + 1)]
 
         if len(paths) == 1:
             value = self.__class__.connection.jsonget(self.key, paths[0])
             super().append(value)
-        else:
+        elif len(paths) > 1:
             #this will probably only work properly for versions of Python that have ordered dictionaries
             result = self.__class__.connection.jsonget(self.key, *paths)
             values = list(result.values())
@@ -141,16 +162,18 @@ class ReJsonArr(list):
         super().extend(iterable)
 
     def insert(self, index, obj):
-        index = self._normalize_index(index)
         self._pull(index)
+        index = self._round_index(index, exclusive=True)
         self.length = self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
         super().insert(index, obj)
 
     def pop(self, index=-1):
-        self._pull(index)
         result = self.__class__.connection.jsonarrpop(self.key, self.path, index)
-        self.length -= 1
-        super().pop(index)
+        self.length = None
+
+        index = self._round_index(index)
+        if index < super().__len__():
+            super().pop(index)
         return result
 
 
