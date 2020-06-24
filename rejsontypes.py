@@ -83,11 +83,6 @@ class ReJsonArr(list):
     # def __iter__(self):
     #     self._pull(-1)
     #     return super().__iter__()
-            
-    # def __len__(self):
-    #     if self.length is None:
-    #         self.length = self.__class__.connection.jsonarrlen(self.key, self.path)
-    #     return self.length
         
     def __getitem__(self, index):
         #add logic for slice
@@ -115,7 +110,7 @@ class ReJsonArr(list):
         super().append(obj)
 
     def clear(self):
-        self.__class__.connection.jsonset(self.key, self.path, {})
+        self.__class__.connection.jsonset(self.key, self.path, [])
         super().clear()
 
     def count(self, value):
@@ -186,9 +181,6 @@ class ReJsonObj(dict):
         else:
             raise TypeError
 
-    def __len__(self):
-        return self.__class__.connection.jsonobjlen(self.key, self.path)
-
     def __getitem__(self, key):
         value = super().__getitem__(key)
         if value is NotPulled:
@@ -209,35 +201,54 @@ class ReJsonObj(dict):
         super().__delitem__(key)
 
     def clear(self):
-        pass
+        self.__class__.connection.jsonset(self.key, self.path, {})
+        super().clear()
 
-    def copy(self):
-        pass
+    # def copy(self):
+    #     pass
 
-    def fromkeys(self):
-        pass
-
-    def get(self):
-        pass
+    def get(self, key, default=None):
+        value = super().get(key, default)
+        if value is NotPulled:
+            value = self.__class__.connection.jsonget(self.key, self.path[key])
+        return value
 
     def items(self):
-        pass
+        pass   
 
-    # def keys(self):
-    #     pass      
-
-    def pop(self):
-        pass
+    def pop(self, key, *args):
+        value = super().pop(key, *args)
+        if value is NotPulled:
+            value = self.__class__.connection.jsonget(self.key, self.path[key])
+        self.__class__.connection.jsondel(self.path, self.path[key])
+        return super().pop(*args)
 
     def popitem(self):
-        pass
+        key, value = super().popitem()
+        if value is NotPulled:
+            value = self.__class__.connection.jsonget(self.key, self.path[key])
+        self.__class__.connection.jsondel(self.key, self.path[key])
+        return (key, value)
 
-    def setdefault(self):
-        pass
+    def setdefault(self, key, default=None):
+        """
+            Insert key with a value of default if key is not in the dictionary.
+
+            Return the value for key if key is in the dictionary, else default.
+        """
+        length_before = len(self)
+        value = super().setdefault(key, default)
+        if value is NotPulled:
+            return self.__class__.connection.jsonget(self.key, self.path[key])
+        
+        if length_before != len(self):
+            self.__class__.connection.jsonset(self.key, self.path[key], default)
+            return value
+
+        return value
 
     def update(self):
         pass
 
     def values(self):
         pass
-    
