@@ -53,14 +53,13 @@ class ReJsonMixin:
     connection = None
 
     def expire(self, ttl):
-        pass
+        return self.__class__.connection.expire(self.key, ttl)
 
     def ttl(self):
-        pass
+        return self.__class__.connection.ttl(self.key)
 
 
-class ReJsonArr(list):
-    connection = None
+class ReJsonArr(ReJsonMixin, list):
 
     def __init__(self, key, path='.', arr=[]):
         self.key = key
@@ -151,8 +150,7 @@ class ReJsonArr(list):
         raise NotImplementedError
 
 
-class ReJsonObj(dict):
-    connection = None
+class ReJsonObj(ReJsonMixin, dict):
 
     def __init__(self, key, path='.', obj={}):
         self.key = key
@@ -235,11 +233,11 @@ class ReJsonObj(dict):
 
         if value == default:
             self.__class__.connection.jsonset(self.key, self.path[key], default, nx=True)
-            
+
         return value
 
     def update(self):
-        pass
+        raise NotImplementedError
 
     def values(self):
-        pass
+        raise NotImplementedError
