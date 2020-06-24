@@ -1,34 +1,6 @@
 
-
-class Path(str):
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-
-    def __getitem__(self, key):
-        path = str(self)
-        if path.startswith('.'):
-            path = path[1:]
-        if isinstance(key, int):
-            path = '{}[{}]'.format(path, key)
-        elif isinstance(key, str):
-            path = '{}.{}'.format(path, key)
-        return self.__class__(path)
-
-
-class NotPulledType:
-    def __new__(cls):
-        """
-            There can only be at most ONE instance of NotPulledType
-        """
-        if not hasattr(cls, '_instance'):
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __repr__(self):
-        return '-'
-
-
-NotPulled = NotPulledType()
+from path import Path
+from notpulled import NotPulled
 
 
 class ReJsonModel():
