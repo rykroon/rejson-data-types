@@ -235,6 +235,7 @@ class ReJsonObj(dict):
 
         if value == default:
             self.__class__.connection.jsonset(self.key, self.path[key], default, nx=True)
+            
         return value
 
     def update(self):
