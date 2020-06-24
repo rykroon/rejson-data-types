@@ -88,21 +88,18 @@ class ReJsonArr(list):
         #add logic for slice
         value = super().__getitem__(index)
         if value is NotPulled:
-            path = self.path[index]
-            value = self.__class__.connection.jsonget(self.key, path)
+            value = self.__class__.connection.jsonget(self.key, self.path[index])
             super().__setitem__(index, value)
         return value
 
     def __setitem__(self, index, value):
         #add logic for slice
-        path = self.path[index]
-        self.__class__.connection.jsonset(self.key, path, value)
+        self.__class__.connection.jsonset(self.key, self.path[index], value)
         super().__setitem__(index, value)
         
     def __delitem__(self, index):
         # add logic for slice
-        path = self.path[index]
-        self.__class__.connection.jsondel(self.key, path)
+        self.__class__.connection.jsondel(self.key, self.path[index])
         super().__delitem__(index)
 
     def append(self, obj):
@@ -122,9 +119,7 @@ class ReJsonArr(list):
 
     def index(self, value, start=0, stop=9223372036854775807):
         index = self.__class__.connection.jsonarrindex(self.key, self.path, value, start, stop)
-        if index >= 0:
-            super().__setitem__(index, value)
-        else:
+        if index < 0:
             raise ValueError("{} is not in list".format(value))
         return index
 
@@ -144,12 +139,10 @@ class ReJsonArr(list):
         return result
 
     def remove(self, value):
-        try:
-            index = self.index(value)
-        except ValueError:
-            raise ValueError("list.remove(x): x not in list") 
-
-        del self[index]
+        index = self.__class__.connection.jsonarrindex(self.key, self.path, value)
+        if index >= 0:
+            self.__class__.connection.jsondel(self.key, self.path[index])        
+        super().remove(value)
 
     def reverse(self):
         raise NotImplementedError
@@ -184,20 +177,17 @@ class ReJsonObj(dict):
     def __getitem__(self, key):
         value = super().__getitem__(key)
         if value is NotPulled:
-            path = self.path[key]
-            value = self.__class__.connection.jsonget(self.key, path)
+            value = self.__class__.connection.jsonget(self.key, self.path[key])
             super().__setitem__(key, value)
         return value
 
     def __setitem__(self, key, value):
         #add logic for slice
-        path = self.path[key]
-        self.__class__.connection.jsonset(self.key, path, value)
+        self.__class__.connection.jsonset(self.key, self.path[key], value)
         super().__setitem__(key, value)
 
     def __delitem__(self, key):
-        path = self.path[key]
-        self.__class__.connection.jsondel(self.key, path)
+        self.__class__.connection.jsondel(self.key, self.path[key])
         super().__delitem__(key)
 
     def clear(self):
@@ -211,6 +201,7 @@ class ReJsonObj(dict):
         value = super().get(key, default)
         if value is NotPulled:
             value = self.__class__.connection.jsonget(self.key, self.path[key])
+            super().__setitem__(key, value)
         return value
 
     def items(self):
@@ -221,7 +212,7 @@ class ReJsonObj(dict):
         if value is NotPulled:
             value = self.__class__.connection.jsonget(self.key, self.path[key])
         self.__class__.connection.jsondel(self.path, self.path[key])
-        return super().pop(*args)
+        return value
 
     def popitem(self):
         key, value = super().popitem()
@@ -236,15 +227,14 @@ class ReJsonObj(dict):
 
             Return the value for key if key is in the dictionary, else default.
         """
-        length_before = len(self)
         value = super().setdefault(key, default)
         if value is NotPulled:
-            return self.__class__.connection.jsonget(self.key, self.path[key])
-        
-        if length_before != len(self):
-            self.__class__.connection.jsonset(self.key, self.path[key], default)
+            value = self.__class__.connection.jsonget(self.key, self.path[key])
+            super().__setitem__(key, value)
             return value
 
+        if value == default:
+            self.__class__.connection.jsonset(self.key, self.path[key], default, nx=True)
         return value
 
     def update(self):
