@@ -1,6 +1,6 @@
 
-from path import Path
-from notpulled import NotPulled
+from .path import Path
+from .notpulled import NotPulled
 
 
 class ReJsonModel():
