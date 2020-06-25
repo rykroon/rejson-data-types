@@ -1,4 +1,4 @@
-import unittest
+from unittest import TestCase, main
 import rejson
 from rejsontypes import ReJsonArr
 
@@ -6,10 +6,7 @@ client = rejson.Client(decode_responses=True)
 ReJsonArr.connection = client
 
 
-class TestArrayInit(unittest.TestCase):
-    def setUp(self):
-        pass
-
+class ArrayInit(TestCase):
     def test_new_arr(self):
         pass
 
@@ -22,8 +19,18 @@ class TestArrayInit(unittest.TestCase):
     def test_default_value_is_not_a_list(self):
         pass
 
+    @classmethod
+    def setUpClass(cls):
+        arr = [1, 2, 3, 'a', 'b', 'c', True, False, None, [], {}]
+        client.jsonset('array', '.', arr)
+        client.jsonset('not_an_array', '.', {})
 
-class TestArrayGetItem(unittest.TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        client.flushdb()
+
+
+class ArrayGetItem(TestCase):
     def setUp(self):
         pass
 
@@ -43,7 +50,7 @@ class TestArrayGetItem(unittest.TestCase):
         pass
 
 
-class TestArraySetItem(unittest.TestCase):
+class ArraySetItem(TestCase):
     def setUp(self):
         pass
 
@@ -63,7 +70,7 @@ class TestArraySetItem(unittest.TestCase):
         pass
 
 
-class TestArrayDelItem(unittest.TestCase):
+class ArrayDelItem(TestCase):
     def setUp(self):
         pass
 
@@ -83,41 +90,49 @@ class TestArrayDelItem(unittest.TestCase):
         pass
 
 
-class TestReJsonArr(unittest.TestCase):    
+class ArrayAppend(TestCase):
+    pass
 
-    def test_append(self):
-        pass
 
-    def test_clear(self):
-        pass
+class ArrayClear(TestCase):
+    pass
 
-    def test_copy(self):
-        pass
 
-    def test_count(self):
-        pass
+class ArrayCopy(TestCase):
+    pass
 
-    def test_extend(self):
-        pass
 
-    def test_index(self):
-        pass
+class ArrayCount(TestCase):
+    pass
 
-    def test_insert(self):
-        pass
 
-    def test_pop(self):
-        pass
+class ArrayExtend(TestCase):
+    pass
 
-    def test_remove(self):
-        pass
 
-    def test_reverse(self):
-        pass
+class ArrayIndex(TestCase):
+    pass
 
-    def test_sort(self):
-        pass
+
+class ArrayInsert(TestCase):
+    pass
+
+
+class ArrayPop(TestCase):
+    pass
+
+
+class ArrayRemove(TestCase):
+    pass
+
+
+class ArrayReverse(TestCase):
+    pass
+
+
+class ArraySort(TestCase):
+    pass
 
 
 if __name__ == '__main__':
-    unittest.main()
+    main()
