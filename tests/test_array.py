@@ -64,17 +64,19 @@ class ArrayGetItem(TestCase):
 
 
 class ArraySetItem(TestCase):
-    def setUp(self):
-        pass
-
     def test_first(self):
-        pass
+        arr = ReJsonArr('array')
+        arr[0] = 100
+        self.assertEqual(arr[0], client.jsonget('array', '[0]'))
 
     def test_last(self):
-        pass
+        arr = ReJsonArr('array')
+        arr[-1] = dict(a=1)
+        self.assertEqual(arr[-1], client.jsonget('array', '[-1]'))
 
     def test_out_of_range(self):
-        pass
+        arr = ReJsonArr('array')
+        self.assertRaises(IndexError, arr.__setitem__, len(arr), 100)
 
     def test_out_of_range_neg(self):
         pass
@@ -82,11 +84,17 @@ class ArraySetItem(TestCase):
     def test_slice(self):
         pass
 
+    @classmethod
+    def setUpClass(cls):
+        arr = [1, 2, 3, 'a', 'b', 'c', True, False, None, [], {}]
+        client.jsonset('array', '.', arr)
+
+    @classmethod
+    def tearDownClass(cls):
+        client.flushdb()
+
 
 class ArrayDelItem(TestCase):
-    def setUp(self):
-        pass
-
     def test_first(self):
         pass
 
