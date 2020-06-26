@@ -33,7 +33,7 @@ class ReJsonMixin:
 
 class ReJsonArr(ReJsonMixin, list):
 
-    def __init__(self, key, path='.', arr=[]):
+    def __init__(self, key, path='.', default=[]):
         self.key = key
         self.path = Path(path)
         json_type = self.__class__.connection.jsontype(self.key, self.path)
@@ -45,11 +45,14 @@ class ReJsonArr(ReJsonMixin, list):
 
         #The array does not exist so create one
         elif json_type is None:
-            super().__init__(arr)
+            if not isinstance(default, list):
+                raise TypeError("default value is not an instance of 'list'")
+            
+            super().__init__(default)
             self.__class__.connection.jsonset(self.key, self.path, self)
 
         else:
-            raise TypeError
+            raise TypeError("Remote object is not of type 'array'")
 
     # def __iter__(self):
     #     self._pull(-1)
