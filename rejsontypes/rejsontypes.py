@@ -2,6 +2,8 @@
 from .path import Path
 from .notpulled import NotPulled
 
+from redis.exceptions import ResponseError
+
 
 class ReJsonModel():
     connection = None
@@ -68,7 +70,10 @@ class ReJsonArr(ReJsonMixin, list):
 
     def __setitem__(self, index, value):
         #add logic for slice
-        self.__class__.connection.jsonset(self.key, self.path[index], value)
+        try:
+            self.__class__.connection.jsonset(self.key, self.path[index], value)
+        except ResponseError as e:
+            raise IndexError('list assignment index out of range')
         super().__setitem__(index, value)
         
     def __delitem__(self, index):
