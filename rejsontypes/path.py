@@ -9,5 +9,5 @@ class Path(str):
         if isinstance(key, int):
             path = '{}[{}]'.format(path, key)
         elif isinstance(key, str):
-            path = '{}.{}'.format(path, key)
+            path = key if not path else '{}.{}'.format(path, key)
         return self.__class__(path)
