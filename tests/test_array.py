@@ -8,16 +8,18 @@ ReJsonArr.connection = client
 
 class ArrayInit(TestCase):
     def test_new_arr(self):
-        pass
+        arr = ReJsonArr('new_array')
+        self.assertEqual(client.jsonget('new_array'), [])
 
     def test_already_existing_arr(self):
-        pass
+        arr = ReJsonArr('array')
+        self.assertEqual(len(arr), client.jsonarrlen('array'))
 
     def test_remote_object_is_not_an_array(self):
-        pass
+        self.assertRaises(TypeError, ReJsonArr, 'not_an_array')
 
     def test_default_value_is_not_a_list(self):
-        pass
+        self.assertRaises(TypeError, ReJsonArr, 'new_array', '.', {})
 
     @classmethod
     def setUpClass(cls):
