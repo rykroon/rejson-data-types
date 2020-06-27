@@ -6,7 +6,15 @@ client = rejson.Client(decode_responses=True)
 ReJsonArr.connection = client
 
 
-class ArrayInit(TestCase):
+class ArrayTestCase(TestCase):
+    def setUp(self):
+        self.list = [100, 200, 300, 1.23, 4.56, 7.89, 'foo', 'bar', 'baz', True, False, None, [], {}]
+        client.jsonset('array', '.', self.list)
+
+    def tearDown(self):
+        client.flushdb()
+
+class ArrayInit(ArrayTestCase):
     def test_new_arr(self):
         arr = ReJsonArr('new_array')
         self.assertEqual(client.jsonget('new_array'), [])
@@ -16,30 +24,21 @@ class ArrayInit(TestCase):
         self.assertEqual(len(arr), client.jsonarrlen('array'))
 
     def test_remote_object_is_not_an_array(self):
+        client.jsonset('not_an_array', '.', {})
         self.assertRaises(TypeError, ReJsonArr, 'not_an_array')
 
     def test_default_value_is_not_a_list(self):
         self.assertRaises(TypeError, ReJsonArr, 'new_array', '.', {})
 
-    @classmethod
-    def setUpClass(cls):
-        arr = [1, 2, 3, 'a', 'b', 'c', True, False, None, [], {}]
-        client.jsonset('array', '.', arr)
-        client.jsonset('not_an_array', '.', {})
 
-    @classmethod
-    def tearDownClass(cls):
-        client.flushdb()
-
-
-class ArrayGetItem(TestCase):
+class ArrayGetItem(ArrayTestCase):
     def test_first(self):
         arr = ReJsonArr('array')
-        self.assertEqual(arr[0], 1)
+        self.assertEqual(arr[0], self.list[0])
 
     def test_last(self):
         arr = ReJsonArr('array')
-        self.assertEqual(arr[-1], {})
+        self.assertEqual(arr[-1], self.list[-1])
 
     def test_out_of_range(self):
         arr = ReJsonArr('array')
@@ -53,45 +52,29 @@ class ArrayGetItem(TestCase):
     def test_slice(self):
         pass
 
-    @classmethod
-    def setUpClass(cls):
-        arr = [1, 2, 3, 'a', 'b', 'c', True, False, None, [], {}]
-        client.jsonset('array', '.', arr)
 
-    @classmethod
-    def tearDownClass(cls):
-        client.flushdb()
-
-
-class ArraySetItem(TestCase):
+class ArraySetItem(ArrayTestCase):
     def test_first(self):
         arr = ReJsonArr('array')
-        arr[0] = 100
+        arr[0] = 'new value'
         self.assertEqual(arr[0], client.jsonget('array', '[0]'))
 
     def test_last(self):
         arr = ReJsonArr('array')
-        arr[-1] = dict(a=1)
+        arr[-1] = 'new value'
         self.assertEqual(arr[-1], client.jsonget('array', '[-1]'))
 
     def test_out_of_range(self):
         arr = ReJsonArr('array')
-        self.assertRaises(IndexError, arr.__setitem__, len(arr), 100)
+        self.assertRaises(IndexError, arr.__setitem__, len(arr), "new value")
 
     def test_out_of_range_neg(self):
-        pass
+        arr = ReJsonArr('array')
+        out_of_range_index = len(arr) * -1 - 1 # out of range passed the 0th index
+        self.assertRaises(IndexError, arr.__setitem__, out_of_range_index, "new value")
 
     def test_slice(self):
         pass
-
-    @classmethod
-    def setUpClass(cls):
-        arr = [1, 2, 3, 'a', 'b', 'c', True, False, None, [], {}]
-        client.jsonset('array', '.', arr)
-
-    @classmethod
-    def tearDownClass(cls):
-        client.flushdb()
 
 
 class ArrayDelItem(TestCase):
