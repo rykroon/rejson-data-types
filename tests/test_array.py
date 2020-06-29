@@ -14,10 +14,11 @@ class ArrayTestCase(TestCase):
     def tearDown(self):
         client.flushdb()
 
+
 class ArrayInit(ArrayTestCase):
     def test_new_arr(self):
         arr = ReJsonArr('new_array')
-        self.assertEqual(client.jsonget('new_array'), [])
+        self.assertEqual(client.jsonget('new_array'), arr)
 
     def test_already_existing_arr(self):
         arr = ReJsonArr('array')
@@ -77,25 +78,38 @@ class ArraySetItem(ArrayTestCase):
         pass
 
 
-class ArrayDelItem(TestCase):
+class ArrayDelItem(ArrayTestCase):
     def test_first(self):
-        pass
+        arr = ReJsonArr('array')
+        del arr[0]
+        self.assertEqual(arr[0], client.jsonget('array', '[0]'))
+        self.assertEqual(len(arr), client.jsonarrlen('array'))
 
     def test_last(self):
-        pass
+        arr = ReJsonArr('array')
+        del arr[-1]
+        self.assertEqual(arr[-1], client.jsonget('array', '[-1]'))
+        self.assertEqual(len(arr), client.jsonarrlen('array'))
 
     def test_out_of_range(self):
-        pass
+        arr = ReJsonArr('array')
+        self.assertRaises(IndexError, arr.__delitem__, len(arr))
 
     def test_out_of_range_neg(self):
-        pass
+        arr = ReJsonArr('array')
+        out_of_range_index = len(arr) * -1 - 1
+        self.assertRaises(IndexError, arr.__delitem__, out_of_range_index)
 
     def test_slice(self):
         pass
 
 
-class ArrayAppend(TestCase):
-    pass
+class ArrayAppend(ArrayTestCase):
+    def test_append_to_new_array(self):
+        pass
+
+    def test_append_to_already_existing_array(self):
+        pass
 
 
 class ArrayClear(TestCase):
@@ -136,6 +150,9 @@ class ArrayReverse(TestCase):
 
 class ArraySort(TestCase):
     pass
+
+
+# !! test expire() and ttl() as well
 
 
 if __name__ == '__main__':
