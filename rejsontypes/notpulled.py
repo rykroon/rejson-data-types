@@ -9,7 +9,8 @@ class NotPulledType:
         return cls._instance
 
     def __repr__(self):
-        return '-'
+        return '\u21e3' #downward dashed arrow
+        #return '-'
 
 
 NotPulled = NotPulledType()
