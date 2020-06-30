@@ -72,7 +72,7 @@ class ReJsonArr(ReJsonMixin, list):
         #add logic for slice
         try:
             self.__class__.connection.jsonset(self.key, self.path[index], value)
-        except ResponseError as e:
+        except ResponseError:
             raise IndexError('list assignment index out of range')
         super().__setitem__(index, value)
         
