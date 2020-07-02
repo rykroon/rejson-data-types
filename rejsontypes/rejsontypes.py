@@ -64,8 +64,7 @@ class ReJsonArr(ReJsonMixin, list):
         #add logic for slice
         value = super().__getitem__(index)
         if value is NotPulled:
-            value = self.__class__.connection.jsonget(self.key, self.path[index])
-            super().__setitem__(index, value)
+            value = self._pull(index)
         return value
 
     def __setitem__(self, index, value):
@@ -80,6 +79,11 @@ class ReJsonArr(ReJsonMixin, list):
         # add logic for slice
         self.__class__.connection.jsondel(self.key, self.path[index])
         super().__delitem__(index)
+
+    def _pull(self, index):
+        value = self.__class__.connection.jsonget(self.key, self.path[index])
+        super().__setitem__(index, value)
+        return value
 
     def append(self, obj):
         self.__class__.connection.jsonarrappend(self.key, self.path, obj)
@@ -155,8 +159,7 @@ class ReJsonObj(ReJsonMixin, dict):
     def __getitem__(self, key):
         value = super().__getitem__(key)
         if value is NotPulled:
-            value = self.__class__.connection.jsonget(self.key, self.path[key])
-            super().__setitem__(key, value)
+            value = self._pull(key)
         return value
 
     def __setitem__(self, key, value):
@@ -168,6 +171,11 @@ class ReJsonObj(ReJsonMixin, dict):
         self.__class__.connection.jsondel(self.key, self.path[key])
         super().__delitem__(key)
 
+    def _pull(self, key):
+        value = self.__class__.connection.jsonget(self.key, self.path[key])
+        super().__setitem__(key, value)
+        return value
+
     def clear(self):
         self.__class__.connection.jsonset(self.key, self.path, {})
         super().clear()
@@ -178,8 +186,7 @@ class ReJsonObj(ReJsonMixin, dict):
     def get(self, key, default=None):
         value = super().get(key, default)
         if value is NotPulled:
-            value = self.__class__.connection.jsonget(self.key, self.path[key])
-            super().__setitem__(key, value)
+            value = self._pull(key)
         return value
 
     def items(self):
@@ -207,8 +214,7 @@ class ReJsonObj(ReJsonMixin, dict):
         """
         value = super().setdefault(key, default)
         if value is NotPulled:
-            value = self.__class__.connection.jsonget(self.key, self.path[key])
-            super().__setitem__(key, value)
+            value = self._pull(key)
             return value
 
         if value == default:
