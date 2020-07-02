@@ -56,9 +56,8 @@ class ReJsonArr(ReJsonMixin, list):
         else:
             raise TypeError("Remote object is not of type 'array'")
 
-    # def __iter__(self):
-    #     self._pull(-1)
-    #     return super().__iter__()
+    def __iter__(self):
+        return ReJsonArrayIterator(self)
         
     def __getitem__(self, index):
         #add logic for slice
@@ -132,6 +131,24 @@ class ReJsonArr(ReJsonMixin, list):
 
     def sort(self):
         raise NotImplementedError
+
+
+class ReJsonArrayIterator:
+    def __init__(self, array):
+        self._next_index = 0
+        self._array = array
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            result = self._array[self._next_index]
+        except IndexError:
+            raise StopIteration
+
+        self._next_index += 1
+        return result
 
 
 class ReJsonObj(ReJsonMixin, dict):
@@ -214,8 +231,7 @@ class ReJsonObj(ReJsonMixin, dict):
         """
         value = super().setdefault(key, default)
         if value is NotPulled:
-            value = self._pull(key)
-            return value
+            return self._pull(key)
 
         if value == default:
             self.__class__.connection.jsonset(self.key, self.path[key], default, nx=True)
