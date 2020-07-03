@@ -56,6 +56,12 @@ class ReJsonArr(ReJsonMixin, list):
         else:
             raise TypeError("Remote object is not of type 'array'")
 
+    def __contains__(self, value):
+        for v in self:
+            if v == value:
+                return True
+        return False
+
     def __iter__(self):
         return ReJsonArrayIterator(self)
         
@@ -136,19 +142,18 @@ class ReJsonArr(ReJsonMixin, list):
 class ReJsonArrayIterator:
     def __init__(self, array):
         self._array = array
+        self._iterator = list.__iter__(self._array)
         self._index = 0
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        try:
-            result = self._array[self._index]
-        except IndexError:
-            raise StopIteration
-
+        value = next(self._iterator)
+        if value is NotPulled:
+            value = self._array._pull(self._index)
         self._index += 1
-        return result
+        return value
 
 
 class ReJsonObj(ReJsonMixin, dict):
