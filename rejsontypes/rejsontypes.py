@@ -135,19 +135,19 @@ class ReJsonArr(ReJsonMixin, list):
 
 class ReJsonArrayIterator:
     def __init__(self, array):
-        self._next_index = 0
         self._array = array
+        self._index = 0
 
     def __iter__(self):
         return self
 
     def __next__(self):
         try:
-            result = self._array[self._next_index]
+            result = self._array[self._index]
         except IndexError:
             raise StopIteration
 
-        self._next_index += 1
+        self._index += 1
         return result
 
 
