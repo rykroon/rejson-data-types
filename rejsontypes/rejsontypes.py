@@ -243,3 +243,31 @@ class ReJsonObj(ReJsonMixin, dict):
 
     def values(self):
         raise NotImplementedError
+
+
+class ReJsonObjItemIterator:
+    def __init__(self, obj):
+        self._obj = obj
+        self._key_iterator = iter(self._obj)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        key = next(self._key_iterator)
+        return (key, self._obj[key])
+
+
+class ReJsonObjValueIterator:
+    def __init__(self, obj):
+        self._obj = obj
+        self._key_iterator = iter(self._obj)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        key = next(self._key_iterator)
+        return self._obj[key]
+
+
