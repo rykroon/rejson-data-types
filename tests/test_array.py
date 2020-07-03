@@ -105,6 +105,13 @@ class ArrayDelItem(ArrayTestCase):
         pass
 
 
+class ArrayContains(ArrayTestCase):
+    def test_contains(self):
+        arr = ReJsonArr('array')
+        self.assertEqual(100 in arr, 100 in self.list)
+        self.assertEqual('nope' in arr, 'nope' in self.list)
+
+
 class ArrayIter(ArrayTestCase):
     def test_iter(self):
         arr = ReJsonArr('array')
