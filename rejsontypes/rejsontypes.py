@@ -44,7 +44,7 @@ class ReJsonArr(ReJsonMixin, list):
 
         #do not create a new array if one already exists
         if json_type == 'array':
-            length = self.__class__.connection.jsonarrlen(self.key, self.path)
+            length = self._jsonarrlen()
             super().__init__([NotFetched] * length)
 
         #The array does not exist so create one
@@ -102,6 +102,7 @@ class ReJsonArr(ReJsonMixin, list):
         return self.__class__.connection.jsonarrappend(self.key, self.path, *values)
 
     def _jsonarrindex(self, value, start=0, stop=0):
+        # !!! jsonarrindex can only find scalars, so that's a problem
         return self.__class__.connection.jsonarrindex(self.key, self.path, value, start, stop)
 
     def _jsonarrinsert(self, index, *values):
