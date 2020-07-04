@@ -1,7 +1,7 @@
 from unittest import TestCase, main
 import rejson
 from rejsontypes import ReJsonArr
-from rejsontypes.notpulled import NotPulled
+from rejsontypes.notfetched import NotFetched
 
 client = rejson.Client(decode_responses=True)
 ReJsonArr.connection = client
@@ -117,12 +117,12 @@ class ArrayIter(ArrayTestCase):
     def test_iter(self):
         arr = ReJsonArr('array')
         for i in arr:
-            self.assertNotEqual(i, NotPulled)
+            self.assertNotEqual(i, NotFetched)
 
     def test_enumerate(self):
         arr = ReJsonArr('array')
         for _, value in enumerate(arr):
-            self.assertNotEqual(value, NotPulled)
+            self.assertNotEqual(value, NotFetched)
 
 
 class ArrayAppend(ArrayTestCase):
