@@ -1,4 +1,4 @@
-class NotPulledType:
+class NotFetchedType:
     """
         A Singleton class
     """
@@ -13,4 +13,4 @@ class NotPulledType:
         #return '-'
 
 
-NotPulled = NotPulledType()
+NotFetched = NotFetchedType()

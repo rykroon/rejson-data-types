@@ -2,7 +2,7 @@
 import logging
 from redis.exceptions import ResponseError
 from .path import Path
-from .notpulled import NotPulled
+from .NotFetched import NotFetched
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class ReJsonArr(ReJsonMixin, list):
         #do not create a new array if one already exists
         if json_type == 'array':
             length = self.__class__.connection.jsonarrlen(self.key, self.path)
-            super().__init__([NotPulled] * length)
+            super().__init__([NotFetched] * length)
 
         #The array does not exist so create one
         elif json_type is None:
@@ -70,8 +70,8 @@ class ReJsonArr(ReJsonMixin, list):
     def __getitem__(self, index):
         #add logic for slice
         value = super().__getitem__(index)
-        if value is NotPulled:
-            value = self._pull(index)
+        if value is NotFetched:
+            value = self._fetch(index)
         return value
 
     def __setitem__(self, index, value):
@@ -87,7 +87,7 @@ class ReJsonArr(ReJsonMixin, list):
         self.__class__.connection.jsondel(self.key, self.path[index])
         super().__delitem__(index)
 
-    def _pull(self, index):
+    def _fetch(self, index):
         value = self.__class__.connection.jsonget(self.key, self.path[index])
         super().__setitem__(index, value)
         return value
@@ -156,8 +156,8 @@ class ReJsonArrayIterator:
 
     def __next__(self):
         value = next(self._iterator)
-        if value is NotPulled:
-            value = self._array._pull(self._index)
+        if value is NotFetched:
+            value = self._array._fetch(self._index)
         self._index += 1
         return value
 
@@ -174,7 +174,7 @@ class ReJsonObj(ReJsonMixin, dict):
         #do not create a new object if one already exists
         if json_type == 'object':
             keys = self.__class__.connection.jsonobjkeys(self.key)
-            super().__init__(dict.fromkeys(keys, NotPulled))
+            super().__init__(dict.fromkeys(keys, NotFetched))
 
         #The object does not exist so create one
         elif json_type is None:
@@ -186,8 +186,8 @@ class ReJsonObj(ReJsonMixin, dict):
 
     def __getitem__(self, key):
         value = super().__getitem__(key)
-        if value is NotPulled:
-            value = self._pull(key)
+        if value is NotFetched:
+            value = self._fetch(key)
         return value
 
     def __setitem__(self, key, value):
@@ -199,7 +199,7 @@ class ReJsonObj(ReJsonMixin, dict):
         self.__class__.connection.jsondel(self.key, self.path[key])
         super().__delitem__(key)
 
-    def _pull(self, key):
+    def _fetch(self, key):
         value = self.__class__.connection.jsonget(self.key, self.path[key])
         super().__setitem__(key, value)
         return value
@@ -213,8 +213,8 @@ class ReJsonObj(ReJsonMixin, dict):
 
     def get(self, key, default=None):
         value = super().get(key, default)
-        if value is NotPulled:
-            value = self._pull(key)
+        if value is NotFetched:
+            value = self._fetch(key)
         return value
 
     def items(self):
@@ -222,14 +222,14 @@ class ReJsonObj(ReJsonMixin, dict):
 
     def pop(self, key, *args):
         value = super().pop(key, *args)
-        if value is NotPulled:
+        if value is NotFetched:
             value = self.__class__.connection.jsonget(self.key, self.path[key])
         self.__class__.connection.jsondel(self.path, self.path[key])
         return value
 
     def popitem(self):
         key, value = super().popitem()
-        if value is NotPulled:
+        if value is NotFetched:
             value = self.__class__.connection.jsonget(self.key, self.path[key])
         self.__class__.connection.jsondel(self.key, self.path[key])
         return (key, value)
@@ -241,8 +241,8 @@ class ReJsonObj(ReJsonMixin, dict):
             Return the value for key if key is in the dictionary, else default.
         """
         value = super().setdefault(key, default)
-        if value is NotPulled:
-            return self._pull(key)
+        if value is NotFetched:
+            return self._fetch(key)
 
         if value == default:
             self.__class__.connection.jsonset(self.key, self.path[key], default, nx=True)
