@@ -2,7 +2,7 @@
 import logging
 from redis.exceptions import ResponseError
 from .path import Path
-from .NotFetched import NotFetched
+from .notfetched import NotFetched
 
 log = logging.getLogger(__name__)
 
@@ -71,29 +71,53 @@ class ReJsonArr(ReJsonMixin, list):
         #add logic for slice
         value = super().__getitem__(index)
         if value is NotFetched:
-            value = self._fetch(index)
+            value = self._jsonget(index)
         return value
 
     def __setitem__(self, index, value):
         #add logic for slice
         try:
-            self.__class__.connection.jsonset(self.key, self.path[index], value)
+            self._jsonset(self.path[index], value)
         except ResponseError:
             raise IndexError('list assignment index out of range')
         super().__setitem__(index, value)
         
     def __delitem__(self, index):
         # add logic for slice
-        self.__class__.connection.jsondel(self.key, self.path[index])
+        self._jsondel(index)
         super().__delitem__(index)
 
-    def _fetch(self, index):
+    def _jsonget(self, index):
         value = self.__class__.connection.jsonget(self.key, self.path[index])
-        super().__setitem__(index, value)
+        super().__setitem__(index, value) #cache the value
         return value
 
+    def _jsonset(self, index, value):
+        return self.__class__.connection.jsonset(self.key, self.path[index], value)
+
+    def _jsondel(self, index):
+        return self.__class__.connection.jsondel(self.key, self.path[index])
+
+    def _jsonarrappend(self, *values):
+        return self.__class__.connection.jsonarrappend(self.key, self.path, *values)
+
+    def _jsonarrindex(self, value, start=0, stop=0):
+        return self.__class__.connection.jsonarrindex(self.key, self.path, value, start, stop)
+
+    def _jsonarrinsert(self, index, *values):
+        return self.__class__.connection.jsonarrinsert(self.key, self.path, index, *values)
+
+    def _jsonarrlen(self):
+        return self.__class__.connection.jsonarrlen(self.key, self.path)
+
+    def _jsonarrpop(self, index):
+        return self.__class__.connection.jsonarrpop(self.key, self.path[index])
+
+    def _jsonarrtrim(self, start, stop):
+        return self.__class__.connection._jsonarrtrim(self.key, self.path, start, stop)
+
     def append(self, obj):
-        self.__class__.connection.jsonarrappend(self.key, self.path, obj)
+        self._jsonarrappend(obj)
         super().append(obj)
 
     def clear(self):
@@ -108,11 +132,12 @@ class ReJsonArr(ReJsonMixin, list):
         return count
         
     def extend(self, iterable):
-        self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
+        self._jsonarrappend(*iterable)
         super().extend(iterable)
 
     def index(self, value, start=0, stop=9223372036854775807):
-        index = self.__class__.connection.jsonarrindex(self.key, self.path, value, start, stop)
+        #if all items are fetched then do super().index()
+        index = self._jsonarrindex(value, start, stop)
         if index < 0:
             raise ValueError("{} is not in list".format(value))
         return index
@@ -124,18 +149,19 @@ class ReJsonArr(ReJsonMixin, list):
         index = max(index, 0)
         index = min(index, len(self))
 
-        self.__class__.connection.jsonarrinsert(self.key, self.path, index, obj)
+        self._jsonarrinsert(index, obj)
         super().insert(index, obj)
 
     def pop(self, index=-1):
-        result = self.__class__.connection.jsonarrpop(self.key, self.path, index)
+        result = self._jsonarrpop(index)
         super().pop(index)
         return result
 
     def remove(self, value):
-        index = self.__class__.connection.jsonarrindex(self.key, self.path, value)
+        # use super().index() if all values are fetched
+        index = self._jsonarrindex(value)
         if index >= 0:
-            self.__class__.connection.jsondel(self.key, self.path[index])        
+            self._jsondel(index)        
         super().remove(value)
 
     def reverse(self):
@@ -157,7 +183,7 @@ class ReJsonArrayIterator:
     def __next__(self):
         value = next(self._iterator)
         if value is NotFetched:
-            value = self._array._fetch(self._index)
+            value = self._array._jsonget(self._index)
         self._index += 1
         return value
 
