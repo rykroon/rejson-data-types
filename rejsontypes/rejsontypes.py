@@ -1,8 +1,10 @@
 
+import logging
+from redis.exceptions import ResponseError
 from .path import Path
 from .notpulled import NotPulled
 
-from redis.exceptions import ResponseError
+log = logging.getLogger(__name__)
 
 
 class ReJsonModel():
@@ -38,13 +40,11 @@ class ReJsonArr(ReJsonMixin, list):
     def __init__(self, key, path='.', default=[]):
         self.key = key
         self.path = Path(path)
-        self.num_notpulled = 0
         json_type = self.__class__.connection.jsontype(self.key, self.path)
 
         #do not create a new array if one already exists
         if json_type == 'array':
             length = self.__class__.connection.jsonarrlen(self.key, self.path)
-            self.num_notpulled = length
             super().__init__([NotPulled] * length)
 
         #The array does not exist so create one
@@ -59,15 +59,10 @@ class ReJsonArr(ReJsonMixin, list):
             raise TypeError("Remote object is not of type 'array'")
 
     def __contains__(self, value):
-        # if all items are pulled just use super().__contains__()
-        if self.num_notpulled <= 0:
-            return super().__contains__(value)
-        
-        else:
-            for v in self:
-                if v == value:
-                    return True
-            return False
+        for v in self:
+            if v == value:
+                return True
+        return False
 
     def __iter__(self):
         return ReJsonArrayIterator(self)
@@ -95,7 +90,6 @@ class ReJsonArr(ReJsonMixin, list):
     def _pull(self, index):
         value = self.__class__.connection.jsonget(self.key, self.path[index])
         super().__setitem__(index, value)
-        self.num_notpulled -= 1
         return value
 
     def append(self, obj):
@@ -107,16 +101,11 @@ class ReJsonArr(ReJsonMixin, list):
         super().clear()
 
     def count(self, value):
-        #if all values are pulled then just use super().count()
-        if self.num_notpulled <= 0:
-            return super().count(value)
-        
-        else:
-            count = 0
-            for v in self:
-                if v == value:
-                    count += 1
-            return count
+        count = 0
+        for v in self:
+            if v == value:
+                count += 1
+        return count
         
     def extend(self, iterable):
         self.__class__.connection.jsonarrappend(self.key, self.path, *iterable)
