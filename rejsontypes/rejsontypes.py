@@ -7,24 +7,6 @@ from .notfetched import NotFetched
 log = logging.getLogger(__name__)
 
 
-class ReJsonModel():
-    connection = None
-
-    def __new__(cls, key, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance.__dict__ = ReJsonObj(key)
-        return instance
-
-    def __getattr__(self, attr):
-        return self.__dict__[attr]
-
-    def __setattr__(self, attr, value):
-        self.__dict__[attr] = value
-
-    def __delattr__(self, attr):
-        del self.__dict__[attr]
-
-
 class ReJsonMixin:
     connection = None
 
