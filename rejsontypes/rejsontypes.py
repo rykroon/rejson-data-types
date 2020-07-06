@@ -7,7 +7,9 @@ from .notfetched import NotFetched
 log = logging.getLogger(__name__)
 
 """
-    to keep things simple, only override methods that add or remove by index
+    to keep things simple, avoid overwriting methods that...
+        - require iteration 
+        - require all values to be fetched from redis
 """
 
 
@@ -175,7 +177,7 @@ class ReJsonObj(ReJsonMixin, dict):
 
         #do not create a new object if one already exists
         if json_type == 'object':
-            keys = self.__class__.connection.jsonobjkeys(self.key)
+            keys = self._jsonobjkeys()
             super().__init__(dict.fromkeys(keys, NotFetched))
 
         #The object does not exist so create one
@@ -189,52 +191,62 @@ class ReJsonObj(ReJsonMixin, dict):
     def __getitem__(self, key):
         value = super().__getitem__(key)
         if value is NotFetched:
-            value = self._fetch(key)
+            value = self._jsonget(key)
         return value
 
     def __setitem__(self, key, value):
         #add logic for slice
-        self.__class__.connection.jsonset(self.key, self.path[key], value)
+        self._jsonset(key, value)
         super().__setitem__(key, value)
 
     def __delitem__(self, key):
-        self.__class__.connection.jsondel(self.key, self.path[key])
+        self._jsondel(key)
         super().__delitem__(key)
 
-    def _fetch(self, key):
-        value = self.__class__.connection.jsonget(self.key, self.path[key])
-        super().__setitem__(key, value)
-        return value
+    def _jsonget(self, *keys):
+        if len(keys) == 1:
+            key = keys[0]
+            value = self.__class__.connection.jsonget(self.key, self.path[key])
+            super().__setitem__(key, value)
+            return value
+
+        if len(keys) > 1:
+            pass
+
+    def _jsonset(self, key, value, nx=False, xx=False):
+        return self.__class__.connection.jsonset(self.key, self.path[key], value, nx=nx, xx=xx)
+
+    def _jsondel(self, key):
+        return self.__class__.connection.jsondel(self.key, self.path[key])
+
+    def _jsonobjkeys(self):
+        return self.__class__.connection.jsonobjkeys(self.key)
 
     def clear(self):
         self.__class__.connection.jsonset(self.key, self.path, {})
         super().clear()
 
-    # def copy(self):
-    #     pass
+    def copy(self):
+        raise NotImplementedError
 
     def get(self, key, default=None):
         value = super().get(key, default)
         if value is NotFetched:
-            value = self._fetch(key)
+            value = self._jsonget(key)
         return value
 
     def items(self):
-        pass   
+        raise NotImplementedError 
 
     def pop(self, key, *args):
         value = super().pop(key, *args)
         if value is NotFetched:
             value = self.__class__.connection.jsonget(self.key, self.path[key])
-        self.__class__.connection.jsondel(self.path, self.path[key])
+        self._jsondel(key)
         return value
 
     def popitem(self):
-        key, value = super().popitem()
-        if value is NotFetched:
-            value = self.__class__.connection.jsonget(self.key, self.path[key])
-        self.__class__.connection.jsondel(self.key, self.path[key])
-        return (key, value)
+        raise NotImplementedError
 
     def setdefault(self, key, default=None):
         """
@@ -244,14 +256,15 @@ class ReJsonObj(ReJsonMixin, dict):
         """
         value = super().setdefault(key, default)
         if value is NotFetched:
-            return self._fetch(key)
+            return self._jsonget(key)
 
         if value == default:
-            self.__class__.connection.jsonset(self.key, self.path[key], default, nx=True)
+            self._jsonset(key, default, nx=True)
 
         return value
 
     def update(self):
+        #add logic later. probably best to use a pipeline
         raise NotImplementedError
 
     def values(self):
