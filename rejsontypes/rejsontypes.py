@@ -6,6 +6,10 @@ from .notfetched import NotFetched
 
 log = logging.getLogger(__name__)
 
+"""
+    to keep things simple, only override methods that add or remove by index
+"""
+
 
 class ReJsonMixin:
     connection = None
@@ -41,10 +45,7 @@ class ReJsonArr(ReJsonMixin, list):
             raise TypeError("Remote object is not of type 'array'")
 
     def __contains__(self, value):
-        for v in self:
-            if v == value:
-                return True
-        return False
+        raise NotImplementedError
 
     def __iter__(self):
         return ReJsonArrayIterator(self)
@@ -69,10 +70,21 @@ class ReJsonArr(ReJsonMixin, list):
         self._jsondel(index)
         super().__delitem__(index)
 
-    def _jsonget(self, index):
-        value = self.__class__.connection.jsonget(self.key, self.path[index])
-        super().__setitem__(index, value) #cache the value
-        return value
+    def _jsonget(self, *indices):
+        if len(indices) == 1:
+            idx = indices[0]
+            val = self.__class__.connection.jsonget(self.key, self.path[idx])
+            super().__setitem__(idx, val) #cache the value
+            return val
+
+        elif len(indices) > 1:
+            paths = [self.path[idx] for idx in indices]
+            result = self.__class__.connection.jsonget(self.key, *paths)
+            for idx, val in result.items():
+                super().__setitem__(idx, val)
+            return list(result.values())
+        
+        raise ValueError("must pass at least one index")
 
     def _jsonset(self, index, value):
         return self.__class__.connection.jsonset(self.key, self.path[index], value)
@@ -83,10 +95,6 @@ class ReJsonArr(ReJsonMixin, list):
     def _jsonarrappend(self, *values):
         return self.__class__.connection.jsonarrappend(self.key, self.path, *values)
 
-    def _jsonarrindex(self, value, start=0, stop=0):
-        # !!! jsonarrindex can only find scalars, so that's a problem
-        return self.__class__.connection.jsonarrindex(self.key, self.path, value, start, stop)
-
     def _jsonarrinsert(self, index, *values):
         return self.__class__.connection.jsonarrinsert(self.key, self.path, index, *values)
 
@@ -95,9 +103,6 @@ class ReJsonArr(ReJsonMixin, list):
 
     def _jsonarrpop(self, index):
         return self.__class__.connection.jsonarrpop(self.key, self.path[index])
-
-    def _jsonarrtrim(self, start, stop):
-        return self.__class__.connection._jsonarrtrim(self.key, self.path, start, stop)
 
     def append(self, obj):
         self._jsonarrappend(obj)
@@ -108,22 +113,14 @@ class ReJsonArr(ReJsonMixin, list):
         super().clear()
 
     def count(self, value):
-        count = 0
-        for v in self:
-            if v == value:
-                count += 1
-        return count
+        raise NotImplementedError
         
     def extend(self, iterable):
         self._jsonarrappend(*iterable)
         super().extend(iterable)
 
-    def index(self, value, start=0, stop=9223372036854775807):
-        #if all items are fetched then do super().index()
-        index = self._jsonarrindex(value, start, stop)
-        if index < 0:
-            raise ValueError("{} is not in list".format(value))
-        return index
+    def index(self, value, start=None, stop=None):
+        raise NotImplementedError
 
     def insert(self, index, obj):
         #round index
@@ -141,11 +138,7 @@ class ReJsonArr(ReJsonMixin, list):
         return result
 
     def remove(self, value):
-        # use super().index() if all values are fetched
-        index = self._jsonarrindex(value)
-        if index >= 0:
-            self._jsondel(index)        
-        super().remove(value)
+        raise NotImplementedError
 
     def reverse(self):
         raise NotImplementedError
