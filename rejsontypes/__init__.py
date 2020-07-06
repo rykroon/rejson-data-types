@@ -1,1 +1,2 @@
-from .rejsontypes import ReJsonArr, ReJsonObj
+from .rejsonarr import ReJsonArr
+from .rejsonobj import ReJsonObj
