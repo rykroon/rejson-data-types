@@ -263,9 +263,25 @@ class ReJsonObj(ReJsonMixin, dict):
 
         return value
 
-    def update(self):
-        #add logic later. probably best to use a pipeline
-        raise NotImplementedError
+    def update(self, iterable=None, **kwargs):
+        p = self.__class__.connection.pipeline()
+        if iterable is not None:
+            if hasattr(iterable, 'keys'):
+                for k in iterable:
+                    p.jsonset(self.key, self.path[k], iterable[k])
+                    super().__setitem__(k, iterable[k])
+                    
+            else:
+                for k, v in iterable:
+                    p.jsonset(self.key, self.path[k], v)
+                    super().__setitem__(k, v)
+        
+        for k in kwargs:
+            p.jsonset(self.key, self.path[k], kwargs[k])
+            super().__setitem__(k, kwargs[k])
+
+        p.execute()
+
 
     def values(self):
         raise NotImplementedError
