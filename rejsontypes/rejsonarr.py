@@ -41,11 +41,17 @@ class ReJsonArr(ReJsonMixin, list):
         return ReJsonArrayIterator(self)
         
     def __getitem__(self, index):
-        #add logic for slice
-        value = super().__getitem__(index)
-        if value is NotFetched:
-            value = self._jsonget(index)
-        return value
+        if type(index) == slice:
+            pass
+            # values = super().__getitem__(index)
+            # indices = [idx for idx, val in enumerate(values) if val is NotFetched]
+            # self._jsonget(*indices)
+
+        else:
+            value = super().__getitem__(index)
+            if value is NotFetched:
+                value = self._jsonget(index)
+            return value
 
     def __setitem__(self, index, value):
         #add logic for slice
