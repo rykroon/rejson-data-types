@@ -71,6 +71,7 @@ class ReJsonArr(ReJsonMixin, list):
             paths = [self.path[idx] for idx in indices]
             result = self.__class__.connection.jsonget(self.key, *paths)
             for idx, val in result.items():
+                #this will probably be an error
                 super().__setitem__(idx, val)
             return list(result.values())
         
