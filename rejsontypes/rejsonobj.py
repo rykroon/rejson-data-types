@@ -3,6 +3,9 @@ from .path import Path
 from .notfetched import NotFetched
 from .rejsonmixin import ReJsonMixin
 
+# used to differentiate between a default value and 'None'
+DEFAULT = object()
+
 
 class ReJsonObj(ReJsonMixin, dict):
 
@@ -33,23 +36,17 @@ class ReJsonObj(ReJsonMixin, dict):
         return value
 
     def __setitem__(self, key, value):
-        #add logic for slice
-        self._jsonset(key, value)
         super().__setitem__(key, value)
-
+        self._jsonset(key, value)
+        
     def __delitem__(self, key):
-        self._jsondel(key)
         super().__delitem__(key)
+        self._jsondel(key)
 
-    def _jsonget(self, *keys):
-        if len(keys) == 1:
-            key = keys[0]
-            value = self.__class__.connection.jsonget(self.key, self.path[key])
-            super().__setitem__(key, value)
-            return value
-
-        if len(keys) > 1:
-            pass
+    def _jsonget(self, key):
+        value = self.__class__.connection.jsonget(self.key, self.path[key])
+        super().__setitem__(key, value)
+        return value
 
     def _jsonset(self, key, value, nx=False, xx=False):
         return self.__class__.connection.jsonset(self.key, self.path[key], value, nx=nx, xx=xx)
@@ -76,10 +73,14 @@ class ReJsonObj(ReJsonMixin, dict):
     def items(self):
         raise NotImplementedError 
 
-    def pop(self, key, *args):
-        value = super().pop(key, *args)
+    def pop(self, key, default=DEFAULT):
+        if default is DEFAULT:
+            value = super().pop(key)
+        else:
+            value = super().pop(key, default)
+
         if value is NotFetched:
-            value = self.__class__.connection.jsonget(self.key, self.path[key])
+            value = self._jsonget(key)
         self._jsondel(key)
         return value
 
@@ -101,25 +102,22 @@ class ReJsonObj(ReJsonMixin, dict):
 
         return value
 
-    def update(self, iterable=None, **kwargs):
+    def update(self, iterable={}, **kwargs):
+        super().update(iterable, **kwargs)
         p = self.__class__.connection.pipeline()
-        if iterable is not None:
+        if iterable:
             if hasattr(iterable, 'keys'):
                 for k in iterable:
                     p.jsonset(self.key, self.path[k], iterable[k])
-                    super().__setitem__(k, iterable[k])
                     
             else:
                 for k, v in iterable:
                     p.jsonset(self.key, self.path[k], v)
-                    super().__setitem__(k, v)
         
         for k in kwargs:
             p.jsonset(self.key, self.path[k], kwargs[k])
-            super().__setitem__(k, kwargs[k])
 
         p.execute()
-
 
     def values(self):
         raise NotImplementedError
